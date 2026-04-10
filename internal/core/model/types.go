@@ -78,6 +78,7 @@ type ProjectStats struct {
 	Files               int
 	Directories         int
 	EmptyDirectories    int
+	EmptyDirectoryPaths []string
 	ByExtension         []ExtensionStat
 	SecretLikeFilePaths []string
 }

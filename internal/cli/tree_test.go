@@ -2,10 +2,10 @@ package cli
 
 import "testing"
 
-func TestParseTreeArgs(t *testing.T) {
-	parsed, err := parseTreeArgs([]string{"--depth=2", "--all"})
+func TestParseTreeFlags(t *testing.T) {
+	parsed, err := parseTreeFlags(nil, treeFlagValues{Depth: 2, All: true})
 	if err != nil {
-		t.Fatalf("parseTreeArgs() error = %v", err)
+		t.Fatalf("parseTreeFlags() error = %v", err)
 	}
 	if parsed.Depth != 2 {
 		t.Fatalf("unexpected depth: %d", parsed.Depth)
@@ -15,8 +15,8 @@ func TestParseTreeArgs(t *testing.T) {
 	}
 }
 
-func TestParseTreeArgs_RejectsNegativeDepth(t *testing.T) {
-	if _, err := parseTreeArgs([]string{"--depth=-1"}); err == nil {
-		t.Fatal("expected parseTreeArgs() to reject negative depth")
+func TestParseTreeFlags_RejectsNegativeDepth(t *testing.T) {
+	if _, err := parseTreeFlags(nil, treeFlagValues{Depth: -1}); err == nil {
+		t.Fatal("expected parseTreeFlags() to reject negative depth")
 	}
 }

@@ -10,12 +10,26 @@ import (
 
 	"boottree/internal/app"
 	"boottree/internal/core/model"
+
+	"github.com/spf13/cobra"
 )
 
-func TestParseInitArgs_NonInteractiveFlags(t *testing.T) {
-	parsed, err := parseInitArgs([]string{"--preset=software-product", "--mode=folders-only", "--include=01_business,06_engineering", "--dry-run", "--yes", "--force"})
+func TestParseInitFlags_NonInteractiveFlags(t *testing.T) {
+	cmd := &cobra.Command{Use: "init"}
+	var values initFlagValues
+	cmd.Flags().StringVar(&values.Preset, "preset", "", "")
+	cmd.Flags().StringVar(&values.Mode, "mode", "", "")
+	cmd.Flags().StringVar(&values.Include, "include", "", "")
+	cmd.Flags().BoolVar(&values.DryRun, "dry-run", false, "")
+	cmd.Flags().BoolVar(&values.Yes, "yes", false, "")
+	cmd.Flags().BoolVar(&values.Force, "force", false, "")
+	if _, err := cmd.Flags().Parse([]string{"--preset=software-product", "--mode=folders-only", "--include=01_business,06_engineering", "--dry-run", "--yes", "--force"}); err != nil {
+		t.Fatalf("Parse() returned error: %v", err)
+	}
+
+	parsed, err := parseInitFlags(cmd, values, nil)
 	if err != nil {
-		t.Fatalf("parseInitArgs returned error: %v", err)
+		t.Fatalf("parseInitFlags returned error: %v", err)
 	}
 	if parsed.Interactive {
 		t.Fatalf("expected non-interactive mode")
@@ -27,7 +41,10 @@ func TestParseInitArgs_NonInteractiveFlags(t *testing.T) {
 
 func TestCompleteInitOptions_InteractiveUsesPromptSelections(t *testing.T) {
 	bootstrap := app.NewBootstrap()
-	input := bufio.NewReader(strings.NewReader("\n2\n1,6,12\n"))
+	input := bufio.NewReader(strings.NewReader(`
+2
+1,6,12
+`))
 	var out bytes.Buffer
 
 	options, presetName, err := completeInitOptions(context.Background(), bootstrap.Presets, input, &out, parsedInitArgs{Interactive: true})
@@ -58,7 +75,9 @@ func TestCompleteInitOptions_InteractiveUsesPromptSelections(t *testing.T) {
 }
 
 func TestConfirmApply_RepromptsUntilAnswerIsValid(t *testing.T) {
-	input := bufio.NewReader(strings.NewReader("maybe\ny\n"))
+	input := bufio.NewReader(strings.NewReader(`maybe
+y
+`))
 	var out bytes.Buffer
 
 	confirmed, err := confirmApply(input, &out)

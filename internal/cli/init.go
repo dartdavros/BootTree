@@ -21,8 +21,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type initFlagValues struct {
+	Preset  string
+	Mode    string
+	Include string
+	DryRun  bool
+	Yes     bool
+	Force   bool
+}
+
 func newInitCommand() *cobra.Command {
-	return &cobra.Command{
+	var flags initFlagValues
+	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initialize the current project from a preset",
 		Long:  "Analyze the current directory, build an execution plan from a preset, render a preview, and optionally apply the changes.",
@@ -31,15 +41,22 @@ func newInitCommand() *cobra.Command {
 			"  boottree init --mode folders-only --include 01_business,06_engineering --yes\n" +
 			"  boottree init --force --yes",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := runInit(cmd, args); err != nil {
+			if err := runInit(cmd, flags, args); err != nil {
 				fmt.Fprintln(cmd.ErrOrStderr(), "Error:", err)
 				os.Exit(1)
 			}
 		},
 	}
+	cmd.Flags().StringVar(&flags.Preset, "preset", "", "Preset to use for initialization")
+	cmd.Flags().StringVar(&flags.Mode, "mode", "", "Initialization mode: folders-only or folders-and-templates")
+	cmd.Flags().StringVar(&flags.Include, "include", "", "Comma-separated top-level sections to include")
+	cmd.Flags().BoolVar(&flags.DryRun, "dry-run", false, "Render the execution plan without writing files")
+	cmd.Flags().BoolVar(&flags.Yes, "yes", false, "Apply without confirmation")
+	cmd.Flags().BoolVar(&flags.Force, "force", false, "Overwrite template files managed by BootTree")
+	return cmd
 }
 
-func runInit(cmd *cobra.Command, args []string) error {
+func runInit(cmd *cobra.Command, flagValues initFlagValues, args []string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("resolve current directory: %w", err)
@@ -52,7 +69,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	initApplier := app.InitApplier{FS: fsys, Templates: bootstrap.Templates, Renderer: bootstrap.Renderer}
 
 	ctx := context.Background()
-	parsed, err := parseInitArgs(args)
+	parsed, err := parseInitFlags(cmd, flagValues, args)
 	if err != nil {
 		return err
 	}
@@ -112,55 +129,21 @@ type parsedInitArgs struct {
 	Interactive bool
 }
 
-func parseInitArgs(args []string) (parsedInitArgs, error) {
-	parsed := parsedInitArgs{Interactive: len(args) == 0}
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch {
-		case arg == "--dry-run":
-			parsed.DryRun = true
-			parsed.Interactive = false
-		case arg == "--yes":
-			parsed.Yes = true
-			parsed.Interactive = false
-		case arg == "--force":
-			parsed.Force = true
-			parsed.Interactive = false
-		case strings.HasPrefix(arg, "--preset="):
-			parsed.Preset = strings.TrimPrefix(arg, "--preset=")
-			parsed.Interactive = false
-		case arg == "--preset":
-			i++
-			if i >= len(args) {
-				return parsedInitArgs{}, fmt.Errorf("flag --preset requires a value")
-			}
-			parsed.Preset = args[i]
-			parsed.Interactive = false
-		case strings.HasPrefix(arg, "--mode="):
-			parsed.Mode = strings.TrimPrefix(arg, "--mode=")
-			parsed.Interactive = false
-		case arg == "--mode":
-			i++
-			if i >= len(args) {
-				return parsedInitArgs{}, fmt.Errorf("flag --mode requires a value")
-			}
-			parsed.Mode = args[i]
-			parsed.Interactive = false
-		case strings.HasPrefix(arg, "--include="):
-			parsed.Include = splitCommaList(strings.TrimPrefix(arg, "--include="))
-			parsed.Interactive = false
-		case arg == "--include":
-			i++
-			if i >= len(args) {
-				return parsedInitArgs{}, fmt.Errorf("flag --include requires a value")
-			}
-			parsed.Include = splitCommaList(args[i])
-			parsed.Interactive = false
-		default:
-			return parsedInitArgs{}, fmt.Errorf("unknown argument: %s", arg)
-		}
+func parseInitFlags(cmd *cobra.Command, flagValues initFlagValues, args []string) (parsedInitArgs, error) {
+	if len(args) > 0 {
+		return parsedInitArgs{}, fmt.Errorf("unknown argument: %s", args[0])
 	}
-	return parsed, nil
+	flags := cmd.Flags()
+	interactive := !(flags.Changed("preset") || flags.Changed("mode") || flags.Changed("include") || flags.Changed("dry-run") || flags.Changed("yes") || flags.Changed("force"))
+	return parsedInitArgs{
+		Preset:      strings.TrimSpace(flagValues.Preset),
+		Mode:        strings.TrimSpace(flagValues.Mode),
+		Include:     splitCommaList(flagValues.Include),
+		DryRun:      flagValues.DryRun,
+		Yes:         flagValues.Yes,
+		Force:       flagValues.Force,
+		Interactive: interactive,
+	}, nil
 }
 
 func completeInitOptions(ctx context.Context, repo model.PresetRepository, in *bufio.Reader, out io.Writer, parsed parsedInitArgs) (model.InitOptions, string, error) {

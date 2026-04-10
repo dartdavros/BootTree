@@ -10,11 +10,19 @@ import (
 	"boottree/internal/platform"
 )
 
+type Options struct {
+	IncludeIgnored bool
+}
+
 type Service struct {
 	FS model.FileSystem
 }
 
 func (s Service) Scan(ctx context.Context, root string) (model.TreeSnapshot, error) {
+	return s.ScanWithOptions(ctx, root, Options{})
+}
+
+func (s Service) ScanWithOptions(ctx context.Context, root string, options Options) (model.TreeSnapshot, error) {
 	_ = ctx
 
 	if s.FS == nil {
@@ -39,7 +47,10 @@ func (s Service) Scan(ctx context.Context, root string) (model.TreeSnapshot, err
 		if rel == "." {
 			return nil
 		}
-		if platform.ShouldIgnore(rel) {
+		if !options.IncludeIgnored && platform.ShouldIgnore(rel) {
+			if entry.IsDir() {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 

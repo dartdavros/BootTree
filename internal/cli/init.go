@@ -4,8 +4,11 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"boottree/internal/app"
@@ -53,7 +56,10 @@ func runInit(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	options, presetName, err := completeInitOptions(ctx, presetRepo, cmd.OutOrStdout(), parsed)
+
+	input := bufio.NewReader(cmd.InOrStdin())
+	output := cmd.OutOrStdout()
+	options, presetName, err := completeInitOptions(ctx, presetRepo, input, output, parsed)
 	if err != nil {
 		return err
 	}
@@ -68,23 +74,23 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Fprintln(cmd.OutOrStdout(), render.RenderExecutionPlan(plan))
+	fmt.Fprintln(output, render.RenderExecutionPlan(plan))
 
 	if len(plan.Conflicts) > 0 {
 		return fmt.Errorf("execution plan contains conflicts; resolve them or change options")
 	}
 	if options.DryRun {
-		fmt.Fprintln(cmd.OutOrStdout(), render.RenderApplySummary(plan, true))
+		fmt.Fprintln(output, render.RenderApplySummary(plan, true))
 		return nil
 	}
 
 	if !parsed.Yes {
-		confirmed, err := confirmApply(cmd.OutOrStdout())
+		confirmed, err := confirmApply(input, output)
 		if err != nil {
 			return err
 		}
 		if !confirmed {
-			fmt.Fprintln(cmd.OutOrStdout(), "Apply canceled.")
+			fmt.Fprintln(output, "Apply canceled.")
 			return nil
 		}
 	}
@@ -92,7 +98,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	if err := initApplier.Apply(ctx, cwd, preset, options, plan); err != nil {
 		return err
 	}
-	fmt.Fprintln(cmd.OutOrStdout(), render.RenderApplySummary(plan, false))
+	fmt.Fprintln(output, render.RenderApplySummary(plan, false))
 	return nil
 }
 
@@ -157,7 +163,7 @@ func parseInitArgs(args []string) (parsedInitArgs, error) {
 	return parsed, nil
 }
 
-func completeInitOptions(ctx context.Context, repo model.PresetRepository, out interface{ Write([]byte) (int, error) }, parsed parsedInitArgs) (model.InitOptions, string, error) {
+func completeInitOptions(ctx context.Context, repo model.PresetRepository, in *bufio.Reader, out io.Writer, parsed parsedInitArgs) (model.InitOptions, string, error) {
 	presets, err := repo.List(ctx)
 	if err != nil {
 		return model.InitOptions{}, "", fmt.Errorf("list presets: %w", err)
@@ -165,12 +171,15 @@ func completeInitOptions(ctx context.Context, repo model.PresetRepository, out i
 	if len(presets) == 0 {
 		return model.InitOptions{}, "", fmt.Errorf("no presets available")
 	}
+	sort.Slice(presets, func(i, j int) bool { return presets[i].Name < presets[j].Name })
 
 	presetName := parsed.Preset
 	if strings.TrimSpace(presetName) == "" {
 		if parsed.Interactive {
-			presetName = presets[0].Name
-			fmt.Fprintf(out, "Preset: %s\n", presetName)
+			presetName, err = promptPresetSelection(in, out, presets)
+			if err != nil {
+				return model.InitOptions{}, "", err
+			}
 		} else {
 			presetName = presets[0].Name
 		}
@@ -184,8 +193,10 @@ func completeInitOptions(ctx context.Context, repo model.PresetRepository, out i
 	mode := model.InitMode(parsed.Mode)
 	if mode == "" {
 		if parsed.Interactive {
-			mode = model.InitModeFoldersAndTemplates
-			fmt.Fprintf(out, "Mode: %s\n", mode)
+			mode, err = promptModeSelection(in, out)
+			if err != nil {
+				return model.InitOptions{}, "", err
+			}
 		} else {
 			mode = model.InitModeFoldersAndTemplates
 		}
@@ -196,9 +207,13 @@ func completeInitOptions(ctx context.Context, repo model.PresetRepository, out i
 
 	selectedSections := parsed.Include
 	if len(selectedSections) == 0 {
-		selectedSections = allSectionIDs(preset.Sections)
 		if parsed.Interactive {
-			fmt.Fprintf(out, "Sections: %s\n", strings.Join(selectedSections, ", "))
+			selectedSections, err = promptSectionSelection(in, out, preset.Sections)
+			if err != nil {
+				return model.InitOptions{}, "", err
+			}
+		} else {
+			selectedSections = allSectionIDs(preset.Sections)
 		}
 	} else if err := validateSections(selectedSections, preset.Sections); err != nil {
 		return model.InitOptions{}, "", err
@@ -251,15 +266,178 @@ func splitCommaList(value string) []string {
 	return result
 }
 
-func confirmApply(out interface{ Write([]byte) (int, error) }) (bool, error) {
-	fmt.Fprint(out, "Apply changes? [y/N]: ")
-	reader := bufio.NewReader(os.Stdin)
-	line, err := reader.ReadString('\n')
-	if err != nil && err.Error() != "EOF" {
-		return false, fmt.Errorf("read confirmation: %w", err)
+func confirmApply(in *bufio.Reader, out io.Writer) (bool, error) {
+	for {
+		fmt.Fprint(out, "Apply changes? [y/N]: ")
+		line, err := readPromptLine(in)
+		if err != nil {
+			return false, fmt.Errorf("read confirmation: %w", err)
+		}
+		answer := strings.TrimSpace(strings.ToLower(line))
+		switch answer {
+		case "", "n", "no":
+			return false, nil
+		case "y", "yes":
+			return true, nil
+		default:
+			fmt.Fprintln(out, "Enter y or n.")
+		}
 	}
-	answer := strings.TrimSpace(strings.ToLower(line))
-	return answer == "y" || answer == "yes", nil
+}
+
+func promptPresetSelection(in *bufio.Reader, out io.Writer, presets []model.Preset) (string, error) {
+	options := make([]promptOption, 0, len(presets))
+	for _, preset := range presets {
+		options = append(options, promptOption{
+			Value:       preset.Name,
+			Label:       preset.Name,
+			Description: preset.Description,
+		})
+	}
+	return promptSingleChoice(in, out, "Select preset", options, 0)
+}
+
+func promptModeSelection(in *bufio.Reader, out io.Writer) (model.InitMode, error) {
+	choice, err := promptSingleChoice(in, out, "Select initialization mode", []promptOption{
+		{
+			Value:       string(model.InitModeFoldersAndTemplates),
+			Label:       string(model.InitModeFoldersAndTemplates),
+			Description: "create directories and template files",
+		},
+		{
+			Value:       string(model.InitModeFoldersOnly),
+			Label:       string(model.InitModeFoldersOnly),
+			Description: "create only directories from the preset",
+		},
+	}, 0)
+	if err != nil {
+		return "", err
+	}
+	return model.InitMode(choice), nil
+}
+
+func promptSectionSelection(in *bufio.Reader, out io.Writer, sections []model.Section) ([]string, error) {
+	fmt.Fprintln(out, "Select sections to include:")
+	for index, section := range sections {
+		fmt.Fprintf(out, "  %d) %s\n", index+1, formatSectionLabel(section))
+	}
+	fmt.Fprintln(out, "Press Enter to include all sections, or enter comma-separated numbers.")
+
+	for {
+		fmt.Fprint(out, "Sections [all]: ")
+		line, err := readPromptLine(in)
+		if err != nil {
+			return nil, fmt.Errorf("read section selection: %w", err)
+		}
+		if strings.TrimSpace(line) == "" {
+			return allSectionIDs(sections), nil
+		}
+
+		indexes, err := parseNumericSelection(line, len(sections))
+		if err != nil {
+			fmt.Fprintf(out, "Invalid selection: %v\n", err)
+			continue
+		}
+
+		result := make([]string, 0, len(indexes))
+		for _, index := range indexes {
+			result = append(result, sections[index].ID)
+		}
+		return result, nil
+	}
+}
+
+type promptOption struct {
+	Value       string
+	Label       string
+	Description string
+}
+
+func promptSingleChoice(in *bufio.Reader, out io.Writer, title string, options []promptOption, defaultIndex int) (string, error) {
+	if len(options) == 0 {
+		return "", fmt.Errorf("no options available for %s", strings.ToLower(title))
+	}
+
+	fmt.Fprintf(out, "%s:\n", title)
+	for index, option := range options {
+		fmt.Fprintf(out, "  %d) %s\n", index+1, formatPromptOption(option))
+	}
+
+	for {
+		fmt.Fprintf(out, "Choice [%d]: ", defaultIndex+1)
+		line, err := readPromptLine(in)
+		if err != nil {
+			return "", fmt.Errorf("read selection: %w", err)
+		}
+		if strings.TrimSpace(line) == "" {
+			return options[defaultIndex].Value, nil
+		}
+
+		choice, err := strconv.Atoi(strings.TrimSpace(line))
+		if err != nil || choice < 1 || choice > len(options) {
+			fmt.Fprintf(out, "Enter a number between 1 and %d.\n", len(options))
+			continue
+		}
+		return options[choice-1].Value, nil
+	}
+}
+
+func formatPromptOption(option promptOption) string {
+	if strings.TrimSpace(option.Description) == "" {
+		return option.Label
+	}
+	return fmt.Sprintf("%s — %s", option.Label, option.Description)
+}
+
+func formatSectionLabel(section model.Section) string {
+	label := section.ID
+	if strings.TrimSpace(section.Label) != "" {
+		label = fmt.Sprintf("%s — %s", section.ID, section.Label)
+	}
+	if strings.TrimSpace(section.Description) != "" {
+		label = fmt.Sprintf("%s (%s)", label, section.Description)
+	}
+	return label
+}
+
+func parseNumericSelection(raw string, max int) ([]int, error) {
+	parts := strings.Split(raw, ",")
+	result := make([]int, 0, len(parts))
+	seen := make(map[int]struct{}, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		value, err := strconv.Atoi(trimmed)
+		if err != nil {
+			return nil, fmt.Errorf("%q is not a number", trimmed)
+		}
+		if value < 1 || value > max {
+			return nil, fmt.Errorf("%d is outside the allowed range 1..%d", value, max)
+		}
+		index := value - 1
+		if _, exists := seen[index]; exists {
+			continue
+		}
+		seen[index] = struct{}{}
+		result = append(result, index)
+	}
+	if len(result) == 0 {
+		return nil, fmt.Errorf("at least one selection is required")
+	}
+	return result, nil
+}
+
+func readPromptLine(in *bufio.Reader) (string, error) {
+	line, err := in.ReadString('\n')
+	if err != nil {
+		if err == io.EOF {
+			return strings.TrimRight(line, "\r\n"), nil
+		}
+		return "", err
+	}
+	return strings.TrimRight(line, "\r\n"), nil
 }
 
 func projectNameFromDir(path string) string {

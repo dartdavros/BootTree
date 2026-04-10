@@ -1,10 +1,10 @@
-# 🦜 BootTree
+# BootTree🦜
 
 BootTree is a cross-platform CLI for standardizing local project structure from presets.
 
 ## MVP commands
 
-- `boottree init` — build a safe execution plan, preview it, and apply it on confirmation
+- `boottree init` — guided interactive setup with preset, mode, and section selection, then preview and apply on confirmation
 - `boottree tree` — render the current project tree with ignore rules and optional depth limit
 - `boottree stats` — print structure statistics, empty directories, and secret-like filenames
 - `boottree version` — print build information
@@ -57,7 +57,7 @@ MVP ships with the built-in preset `software-product`. It creates the following 
 
 ## Init behavior
 
-`boottree init` always follows the same model:
+`boottree init` always follows the same model. With no flags it opens an interactive flow for preset, mode, and section selection:
 
 1. load preset
 2. scan current directory

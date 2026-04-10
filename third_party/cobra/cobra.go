@@ -17,6 +17,7 @@ type Command struct {
 
 	children []*Command
 	parent   *Command
+	in       io.Reader
 	out      io.Writer
 	err      io.Writer
 }
@@ -160,6 +161,16 @@ func (c *Command) CommandPath() string {
 	return c.parent.CommandPath() + " " + c.Name()
 }
 
+func (c *Command) InOrStdin() io.Reader {
+	if c.in != nil {
+		return c.in
+	}
+	if c.parent != nil {
+		return c.parent.InOrStdin()
+	}
+	return os.Stdin
+}
+
 func (c *Command) OutOrStdout() io.Writer {
 	if c.out != nil {
 		return c.out
@@ -180,5 +191,6 @@ func (c *Command) ErrOrStderr() io.Writer {
 	return os.Stderr
 }
 
+func (c *Command) SetIn(r io.Reader)  { c.in = r }
 func (c *Command) SetOut(w io.Writer) { c.out = w }
 func (c *Command) SetErr(w io.Writer) { c.err = w }

@@ -1,0 +1,18 @@
+{
+  "name": "software-product",
+  "description": "Standard structure for product and engineering workspaces.",
+  "sections": [
+    {"id": "01_business", "label": "Business", "description": "Vision, strategy, roadmap and stakeholders."},
+    {"id": "06_engineering", "label": "Engineering", "description": "Architecture, ADRs, plans and technical documentation."},
+    {"id": "07_repos", "label": "Repos", "description": "Repository-related workspace."}
+  ],
+  "directories": [
+    {"path": "01_business", "sections": ["01_business"], "children": [{"path": "vision"}, {"path": "roadmap"}]},
+    {"path": "06_engineering", "sections": ["06_engineering"], "children": [{"path": "architecture"}, {"path": "adr"}, {"path": "plans"}]},
+    {"path": "07_repos", "sections": ["07_repos"], "children": [{"path": "app"}, {"path": "infra"}]}
+  ],
+  "templates": [
+    {"sourceTemplate": "software-product/docs/README.md.tmpl", "targetPath": "README.md"},
+    {"sourceTemplate": "software-product/engineering/architecture.md.tmpl", "targetPath": "06_engineering/architecture/00-architecture.md", "sections": ["06_engineering"]}
+  ]
+}

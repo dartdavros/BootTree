@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bytes"
-	"os"
 	"strings"
 	"testing"
 )
@@ -11,10 +10,8 @@ func TestNewRootCommand_HelpFlag(t *testing.T) {
 	cmd := NewRootCommand()
 	var out bytes.Buffer
 	cmd.SetOut(&out)
-
-	originalArgs := os.Args
-	defer func() { os.Args = originalArgs }()
-	os.Args = []string{"boottree", "--help"}
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"--help"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("Execute() error = %v", err)
@@ -27,16 +24,17 @@ func TestNewRootCommand_HelpFlag(t *testing.T) {
 	if !strings.Contains(text, "version") {
 		t.Fatalf("expected help to include version command, got %q", text)
 	}
+	if !strings.Contains(text, "completion") {
+		t.Fatalf("expected help to include completion command, got %q", text)
+	}
 }
 
 func TestNewRootCommand_VersionFlag(t *testing.T) {
 	cmd := NewRootCommand()
 	var out bytes.Buffer
 	cmd.SetOut(&out)
-
-	originalArgs := os.Args
-	defer func() { os.Args = originalArgs }()
-	os.Args = []string{"boottree", "--version"}
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"--version"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("Execute() error = %v", err)

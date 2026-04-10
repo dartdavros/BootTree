@@ -1,9 +1,9 @@
 package cli
 
 import (
-	"bufio"
 	"bytes"
 	"context"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -14,25 +14,42 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func TestParseInitFlags_NonInteractiveFlags(t *testing.T) {
+type stubInitPrompter struct {
+	preset    string
+	mode      model.InitMode
+	sections  []string
+	confirmed bool
+}
+
+func (s stubInitPrompter) SelectPreset(_ io.Reader, _ io.Writer, _ io.Writer, _ []model.Preset) (string, error) {
+	return s.preset, nil
+}
+
+func (s stubInitPrompter) SelectMode(_ io.Reader, _ io.Writer, _ io.Writer) (model.InitMode, error) {
+	return s.mode, nil
+}
+
+func (s stubInitPrompter) SelectSections(_ io.Reader, _ io.Writer, _ io.Writer, _ []model.Section) ([]string, error) {
+	return s.sections, nil
+}
+
+func (s stubInitPrompter) ConfirmApply(_ io.Reader, _ io.Writer, _ io.Writer) (bool, error) {
+	return s.confirmed, nil
+}
+
+func TestReadInitFlags_NonInteractiveWhenAnyFlagChanged(t *testing.T) {
 	cmd := &cobra.Command{Use: "init"}
-	var values initFlagValues
-	cmd.Flags().StringVar(&values.Preset, "preset", "", "")
-	cmd.Flags().StringVar(&values.Mode, "mode", "", "")
-	cmd.Flags().StringVar(&values.Include, "include", "", "")
-	cmd.Flags().BoolVar(&values.DryRun, "dry-run", false, "")
-	cmd.Flags().BoolVar(&values.Yes, "yes", false, "")
-	cmd.Flags().BoolVar(&values.Force, "force", false, "")
-	if _, err := cmd.Flags().Parse([]string{"--preset=software-product", "--mode=folders-only", "--include=01_business,06_engineering", "--dry-run", "--yes", "--force"}); err != nil {
-		t.Fatalf("Parse() returned error: %v", err)
+	flags := &initCommandFlags{}
+	bindInitFlags(cmd, flags)
+
+	args := []string{"--preset=software-product", "--mode=folders-only", "--include=01_business,06_engineering", "--dry-run", "--yes", "--force"}
+	if err := cmd.ParseFlags(args); err != nil {
+		t.Fatalf("ParseFlags() error = %v", err)
 	}
 
-	parsed, err := parseInitFlags(cmd, values, nil)
-	if err != nil {
-		t.Fatalf("parseInitFlags returned error: %v", err)
-	}
+	parsed := readInitFlags(cmd, flags)
 	if parsed.Interactive {
-		t.Fatalf("expected non-interactive mode")
+		t.Fatal("expected non-interactive mode")
 	}
 	if !reflect.DeepEqual(parsed.Include, []string{"01_business", "06_engineering"}) {
 		t.Fatalf("unexpected sections: %#v", parsed.Include)
@@ -41,13 +58,14 @@ func TestParseInitFlags_NonInteractiveFlags(t *testing.T) {
 
 func TestCompleteInitOptions_InteractiveUsesPromptSelections(t *testing.T) {
 	bootstrap := app.NewBootstrap()
-	input := bufio.NewReader(strings.NewReader(`
-2
-1,6,12
-`))
 	var out bytes.Buffer
+	prompter := stubInitPrompter{
+		preset:   "software-product",
+		mode:     model.InitModeFoldersOnly,
+		sections: []string{"00_inbox", "05_docs", "99_archive"},
+	}
 
-	options, presetName, err := completeInitOptions(context.Background(), bootstrap.Presets, input, &out, parsedInitArgs{Interactive: true})
+	options, presetName, err := completeInitOptions(context.Background(), bootstrap.Presets, strings.NewReader(""), &out, &out, prompter, parsedInitArgs{Interactive: true})
 	if err != nil {
 		t.Fatalf("completeInitOptions returned error: %v", err)
 	}
@@ -62,44 +80,13 @@ func TestCompleteInitOptions_InteractiveUsesPromptSelections(t *testing.T) {
 	if !reflect.DeepEqual(options.SelectedSections, wantSections) {
 		t.Fatalf("unexpected selected sections: %#v", options.SelectedSections)
 	}
-	text := out.String()
-	if !strings.Contains(text, "Select preset:") {
-		t.Fatalf("expected preset prompt, got %q", text)
-	}
-	if !strings.Contains(text, "Select initialization mode:") {
-		t.Fatalf("expected mode prompt, got %q", text)
-	}
-	if !strings.Contains(text, "Sections [all]:") {
-		t.Fatalf("expected sections prompt, got %q", text)
-	}
 }
 
-func TestConfirmApply_RepromptsUntilAnswerIsValid(t *testing.T) {
-	input := bufio.NewReader(strings.NewReader(`maybe
-y
-`))
-	var out bytes.Buffer
-
-	confirmed, err := confirmApply(input, &out)
-	if err != nil {
-		t.Fatalf("confirmApply returned error: %v", err)
-	}
-	if !confirmed {
-		t.Fatal("expected confirmation to succeed")
-	}
-	if !strings.Contains(out.String(), "Enter y or n.") {
-		t.Fatalf("expected validation message, got %q", out.String())
-	}
-}
-
-func TestParseNumericSelection_DeduplicatesAndPreservesOrder(t *testing.T) {
-	indexes, err := parseNumericSelection("3, 1, 3, 2", 4)
-	if err != nil {
-		t.Fatalf("parseNumericSelection returned error: %v", err)
-	}
-	want := []int{2, 0, 1}
-	if !reflect.DeepEqual(indexes, want) {
-		t.Fatalf("unexpected indexes: %#v", indexes)
+func TestCompactStrings_DeduplicatesAndPreservesOrder(t *testing.T) {
+	got := compactStrings([]string{"03_marketing", "01_business", "03_marketing", "", " 02_product "})
+	want := []string{"03_marketing", "01_business", "02_product"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("compactStrings() = %#v, want %#v", got, want)
 	}
 }
 

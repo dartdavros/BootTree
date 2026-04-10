@@ -9,14 +9,14 @@ import (
 	"sort"
 	"strings"
 
-	"boottree/internal/assets"
+	presetsfs "boottree/presets"
 	"boottree/internal/core/model"
 )
 
 type EmbeddedRepository struct{ root fs.FS }
 
 func NewEmbeddedRepository() EmbeddedRepository {
-	root, err := fs.Sub(assets.FS, "presets")
+	root, err := fs.Sub(presetsfs.FS, ".")
 	if err != nil {
 		panic(err)
 	}

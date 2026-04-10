@@ -8,6 +8,21 @@ BootTree is a cross-platform CLI for standardizing local project structure from 
 - `boottree tree` — render the current project tree with ignore rules and optional depth limit
 - `boottree stats` — print structure statistics, empty directories, and secret-like filenames
 - `boottree version` — print build information
+- `boottree completion <shell>` — generate shell completion scripts via Cobra
+
+## Repository layout
+
+```text
+BootTree/
+├─ cmd/
+├─ internal/
+├─ presets/
+├─ templates/
+├─ testdata/
+└─ docs/
+```
+
+`presets/` and `templates/` live at the top level so the embedded data model stays discoverable, data-driven, and easy to evolve independently from CLI and core logic.
 
 ## Quick start
 
@@ -17,11 +32,13 @@ BootTree is a cross-platform CLI for standardizing local project structure from 
 # Windows PowerShell
 $env:GOOS = "windows"
 $env:GOARCH = "amd64"
+go mod tidy
 go build -o .\dist\boottree.exe .\cmd\boottree
 ```
 
 ```bash
 # Linux or macOS
+go mod tidy
 GOOS=linux GOARCH=amd64 go build -o ./dist/boottree ./cmd/boottree
 GOOS=darwin GOARCH=amd64 go build -o ./dist/boottree-darwin ./cmd/boottree
 ```
@@ -36,6 +53,7 @@ boottree init --preset software-product --mode folders-only --dry-run
 boottree init --include 01_business,06_engineering --yes
 boottree tree --depth 2
 boottree stats
+boottree completion powershell
 ```
 
 ## Preset

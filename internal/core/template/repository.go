@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"io/fs"
 
-	"boottree/internal/assets"
+	templatesfs "boottree/templates"
 )
 
 type EmbeddedRepository struct{ root fs.FS }
 
 func NewEmbeddedRepository() EmbeddedRepository {
-	root, err := fs.Sub(assets.FS, "templates")
+	root, err := fs.Sub(templatesfs.FS, ".")
 	if err != nil {
 		panic(err)
 	}

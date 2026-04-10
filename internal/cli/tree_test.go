@@ -1,22 +1,18 @@
 package cli
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
-func TestParseTreeFlags(t *testing.T) {
-	parsed, err := parseTreeFlags(nil, treeFlagValues{Depth: 2, All: true})
-	if err != nil {
-		t.Fatalf("parseTreeFlags() error = %v", err)
+func TestTreeCommand_RejectsNegativeDepth(t *testing.T) {
+	cmd := newTreeCommand()
+	cmd.SetArgs([]string{"--depth=-1"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected Execute() to reject negative depth")
 	}
-	if parsed.Depth != 2 {
-		t.Fatalf("unexpected depth: %d", parsed.Depth)
-	}
-	if !parsed.All {
-		t.Fatal("expected --all to be enabled")
-	}
-}
-
-func TestParseTreeFlags_RejectsNegativeDepth(t *testing.T) {
-	if _, err := parseTreeFlags(nil, treeFlagValues{Depth: -1}); err == nil {
-		t.Fatal("expected parseTreeFlags() to reject negative depth")
+	if !strings.Contains(err.Error(), "invalid depth") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

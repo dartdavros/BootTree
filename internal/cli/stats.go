@@ -20,20 +20,14 @@ func newStatsCommand() *cobra.Command {
 		Short:   "Show project structure statistics",
 		Long:    "Scan the current directory and print a human-readable summary of directories, files, extensions, empty folders, and secret-like filenames.",
 		Example: "  boottree stats",
-		Run: func(cmd *cobra.Command, args []string) {
-			if err := runStats(cmd, args); err != nil {
-				fmt.Fprintln(cmd.ErrOrStderr(), "Error:", err)
-				os.Exit(1)
-			}
+		Args:    cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runStats(cmd)
 		},
 	}
 }
 
-func runStats(cmd *cobra.Command, args []string) error {
-	if len(args) > 0 {
-		return fmt.Errorf("unknown argument: %s", args[0])
-	}
-
+func runStats(cmd *cobra.Command) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("resolve current directory: %w", err)

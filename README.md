@@ -1,4 +1,4 @@
-# 🪄 BootTree
+# 🦜 BootTree
 
 BootTree is a cross-platform CLI for standardizing local project structure from presets.
 
@@ -40,7 +40,20 @@ boottree stats
 
 ## Preset
 
-MVP ships with the built-in preset `software-product`.
+MVP ships with the built-in preset `software-product`. It creates the following top-level project areas:
+
+- `00_inbox`
+- `01_business`
+- `02_product`
+- `03_marketing`
+- `04_brand`
+- `05_docs`
+- `06_engineering`
+- `07_repos`
+- `08_deploy`
+- `09_assets`
+- `10_secrets`
+- `99_archive`
 
 ## Init behavior
 

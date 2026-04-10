@@ -1,4 +1,4 @@
-# BootTree
+# 🪄 BootTree
 
 BootTree is a cross-platform CLI for standardizing local project structure from presets.
 

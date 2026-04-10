@@ -16,11 +16,13 @@ import (
 
 func newStatsCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "stats",
-		Short: "Show project structure statistics",
+		Use:     "stats",
+		Short:   "Show project structure statistics",
+		Long:    "Scan the current directory and print a human-readable summary of directories, files, extensions, empty folders, and secret-like filenames.",
+		Example: "  boottree stats",
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := runStats(cmd, args); err != nil {
-				fmt.Fprintln(cmd.OutOrStdout(), "Error:", err)
+				fmt.Fprintln(cmd.ErrOrStderr(), "Error:", err)
 				os.Exit(1)
 			}
 		},

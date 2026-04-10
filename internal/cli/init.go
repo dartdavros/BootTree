@@ -22,9 +22,14 @@ func newInitCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "init",
 		Short: "Initialize the current project from a preset",
+		Long:  "Analyze the current directory, build an execution plan from a preset, render a preview, and optionally apply the changes.",
+		Example: "  boottree init\n" +
+			"  boottree init --preset software-product --dry-run\n" +
+			"  boottree init --mode folders-only --include 01_business,06_engineering --yes\n" +
+			"  boottree init --force --yes",
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := runInit(cmd, args); err != nil {
-				fmt.Fprintln(cmd.OutOrStdout(), "Error:", err)
+				fmt.Fprintln(cmd.ErrOrStderr(), "Error:", err)
 				os.Exit(1)
 			}
 		},
@@ -247,14 +252,16 @@ func splitCommaList(value string) []string {
 }
 
 func confirmApply(out interface{ Write([]byte) (int, error) }) (bool, error) {
-	fmt.Fprint(out, "Apply this plan? [y/N]: ")
+	fmt.Fprint(out, "Apply changes? [y/N]: ")
 	reader := bufio.NewReader(os.Stdin)
 	line, err := reader.ReadString('\n')
-	if err != nil && !strings.Contains(err.Error(), "EOF") {
+	if err != nil && err.Error() != "EOF" {
 		return false, fmt.Errorf("read confirmation: %w", err)
 	}
-	answer := strings.ToLower(strings.TrimSpace(line))
+	answer := strings.TrimSpace(strings.ToLower(line))
 	return answer == "y" || answer == "yes", nil
 }
 
-func targetProjectName(root string) string { return filepath.Base(filepath.Clean(root)) }
+func projectNameFromDir(path string) string {
+	return filepath.Base(filepath.Clean(path))
+}

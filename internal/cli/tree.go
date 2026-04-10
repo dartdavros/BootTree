@@ -24,9 +24,13 @@ func newTreeCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "tree",
 		Short: "Render the current project tree",
+		Long:  "Scan the current directory, apply ignore rules by default, and render a stable text tree view.",
+		Example: "  boottree tree\n" +
+			"  boottree tree --depth 2\n" +
+			"  boottree tree --all",
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := runTree(cmd, args); err != nil {
-				fmt.Fprintln(cmd.OutOrStdout(), "Error:", err)
+				fmt.Fprintln(cmd.ErrOrStderr(), "Error:", err)
 				os.Exit(1)
 			}
 		},

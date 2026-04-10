@@ -76,6 +76,8 @@ func (Service) Build(snapshot model.TreeSnapshot, preset model.Preset, options m
 			if isDir, exists := existing[cleanPath]; exists {
 				if isDir {
 					plan.Conflicts = append(plan.Conflicts, model.PlanAction{Path: cleanPath, Reason: "target file path already occupied by directory"})
+				} else if options.Force {
+					plan.FilesToCreate = append(plan.FilesToCreate, model.PlanAction{Path: cleanPath, Reason: "overwrite existing template file"})
 				} else {
 					plan.SkippedExisting = append(plan.SkippedExisting, model.PlanAction{Path: cleanPath, Reason: "file already exists"})
 				}

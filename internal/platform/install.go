@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -199,14 +200,14 @@ func sameFilePath(a, b string) bool {
 }
 
 func pathListContainsDir(pathValue, dir string, caseInsensitive bool) bool {
-	want := filepath.Clean(strings.TrimSpace(dir))
+	want := normalizePathEntry(strings.TrimSpace(dir), caseInsensitive)
 	if want == "" {
 		return false
 	}
 
-	for _, entry := range filepath.SplitList(pathValue) {
-		candidate := filepath.Clean(strings.TrimSpace(entry))
-		if candidate == "." || candidate == "" {
+	for _, entry := range splitPathList(pathValue, caseInsensitive) {
+		candidate := normalizePathEntry(strings.TrimSpace(entry), caseInsensitive)
+		if candidate == "" {
 			continue
 		}
 		if caseInsensitive {
@@ -220,4 +221,33 @@ func pathListContainsDir(pathValue, dir string, caseInsensitive bool) bool {
 		}
 	}
 	return false
+}
+
+func splitPathList(pathValue string, caseInsensitive bool) []string {
+	if caseInsensitive {
+		return strings.Split(pathValue, ";")
+	}
+	return filepath.SplitList(pathValue)
+}
+
+func normalizePathEntry(value string, caseInsensitive bool) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+
+	if caseInsensitive {
+		normalized := strings.ReplaceAll(value, "\\", "/")
+		normalized = path.Clean(normalized)
+		if normalized == "." {
+			return ""
+		}
+		return normalized
+	}
+
+	normalized := filepath.Clean(value)
+	if normalized == "." {
+		return ""
+	}
+	return normalized
 }

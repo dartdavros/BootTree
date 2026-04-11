@@ -34,3 +34,15 @@ func TestSameFilePath(t *testing.T) {
 		t.Fatalf("expected %q and %q to be treated as the same path", left, right)
 	}
 }
+
+func TestPathListContainsDir_WindowsListOnNonWindowsRunner(t *testing.T) {
+	pathValue := strings.Join([]string{
+		`C:\Windows\System32`,
+		`C:\Users\Example\AppData\Local\Programs\BootTree\bin`,
+		`C:\Tools`,
+	}, ";")
+	dir := `c:\users\example\appdata\local\programs\boottree\bin`
+	if !pathListContainsDir(pathValue, dir, true) {
+		t.Fatalf("expected case-insensitive Windows PATH match for %q and %q", pathValue, dir)
+	}
+}

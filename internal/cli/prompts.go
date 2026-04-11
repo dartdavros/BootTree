@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"boottree/internal/core/model"
+	"boottree/internal/platform"
 
 	survey "github.com/AlecAivazis/survey/v2"
 	surveyterminal "github.com/AlecAivazis/survey/v2/terminal"
@@ -17,6 +18,10 @@ type initPrompter interface {
 	SelectMode(in io.Reader, out io.Writer, errOut io.Writer) (model.InitMode, error)
 	SelectSections(in io.Reader, out io.Writer, errOut io.Writer, sections []model.Section) ([]string, error)
 	ConfirmApply(in io.Reader, out io.Writer, errOut io.Writer) (bool, error)
+}
+
+type installPrompter interface {
+	ConfirmInstall(in io.Reader, out io.Writer, errOut io.Writer, state platform.InstallState) (bool, error)
 }
 
 type surveyInitPrompter struct{}
@@ -104,6 +109,19 @@ func (surveyInitPrompter) ConfirmApply(in io.Reader, out io.Writer, errOut io.Wr
 	var confirmed bool
 	if err := survey.AskOne(prompt, &confirmed, askOpts(in, out, errOut)...); err != nil {
 		return false, wrapPromptError("confirm apply", err)
+	}
+	return confirmed, nil
+}
+
+func (surveyInitPrompter) ConfirmInstall(in io.Reader, out io.Writer, errOut io.Writer, state platform.InstallState) (bool, error) {
+	prompt := &survey.Confirm{
+		Message: fmt.Sprintf("Install %s into %s and add it to PATH for the current user?", state.CommandName, state.SuggestedInstallDir),
+		Default: true,
+	}
+
+	var confirmed bool
+	if err := survey.AskOne(prompt, &confirmed, askOpts(in, out, errOut)...); err != nil {
+		return false, wrapPromptError("confirm install", err)
 	}
 	return confirmed, nil
 }

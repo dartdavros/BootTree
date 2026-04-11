@@ -4,11 +4,16 @@ import (
 	"fmt"
 
 	"boottree/internal/buildinfo"
+	"boottree/internal/platform"
 
 	"github.com/spf13/cobra"
 )
 
 func NewRootCommand() *cobra.Command {
+	return newRootCommandWithDependencies(platform.SelfInstaller{}, surveyInitPrompter{})
+}
+
+func newRootCommandWithDependencies(installer selfInstaller, prompter installPrompter) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "boottree",
 		Short:         "Standardize and inspect local project structure",
@@ -16,10 +21,14 @@ func NewRootCommand() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       buildinfo.Version,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			return maybeOfferInstall(cmd, installer, prompter)
+		},
 		Example: "  boottree init\n" +
 			"  boottree init --preset software-product --mode folders-only --dry-run\n" +
 			"  boottree tree --depth 2\n" +
 			"  boottree stats\n" +
+			"  boottree install\n" +
 			"  boottree version",
 	}
 	cmd.SetVersionTemplate("boottree {{.Version}}\n")
@@ -30,6 +39,7 @@ func NewRootCommand() *cobra.Command {
 	cmd.AddCommand(newInitCommand())
 	cmd.AddCommand(newTreeCommand())
 	cmd.AddCommand(newStatsCommand())
+	cmd.AddCommand(newInstallCommandWithDependencies(installer, prompter))
 	return cmd
 }
 

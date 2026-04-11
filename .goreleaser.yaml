@@ -1,0 +1,53 @@
+version: 2
+
+project_name: boottree
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: boottree
+    main: ./cmd/boottree
+    binary: boottree
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - >-
+        -s -w
+        -X boottree/internal/buildinfo.Version={{ .Version }}
+        -X boottree/internal/buildinfo.Commit={{ .Commit }}
+        -X boottree/internal/buildinfo.BuildDate={{ .Date }}
+
+archives:
+  - id: releases
+    ids:
+      - boottree
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - binary
+
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'

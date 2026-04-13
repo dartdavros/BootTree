@@ -94,7 +94,7 @@ boottree --help
 boottree --version
 boottree init
 boottree init --preset software-product --mode folders-only --dry-run
-boottree init --include 01_business,06_engineering --yes
+boottree init --include business,engineering --yes
 boottree tree --depth 2
 boottree stats
 boottree install
@@ -128,18 +128,18 @@ BootTree/
 
 MVP ships with the built-in preset `software-product`. It creates the following top-level project areas:
 
-- `00_inbox`
-- `01_business`
-- `02_product`
-- `03_marketing`
-- `04_brand`
-- `05_docs`
-- `06_engineering`
-- `07_repos`
-- `08_deploy`
-- `09_assets`
-- `10_secrets`
-- `99_archive`
+- `inbox`
+- `business`
+- `product`
+- `marketing`
+- `brand`
+- `docs`
+- `engineering`
+- `repos`
+- `deploy`
+- `assets`
+- `secrets`
+- `archive`
 
 ## Init behavior
 

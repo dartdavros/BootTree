@@ -74,10 +74,12 @@ func (surveyInitPrompter) SelectMode(in io.Reader, out io.Writer, errOut io.Writ
 func (surveyInitPrompter) SelectSections(in io.Reader, out io.Writer, errOut io.Writer, sections []model.Section) ([]string, error) {
 	options := make([]string, 0, len(sections))
 	defaults := make([]string, 0, len(sections))
+	optionToID := make(map[string]string, len(sections))
 	for _, section := range sections {
-		label := section.ID
-		options = append(options, label)
-		defaults = append(defaults, label)
+		option := sectionOptionLabel(section)
+		options = append(options, option)
+		defaults = append(defaults, option)
+		optionToID[option] = section.ID
 	}
 
 	prompt := &survey.MultiSelect{
@@ -97,7 +99,16 @@ func (surveyInitPrompter) SelectSections(in io.Reader, out io.Writer, errOut io.
 	if len(answer) == 0 {
 		return nil, fmt.Errorf("at least one section must be selected")
 	}
-	return answer, nil
+
+	selected := make([]string, 0, len(answer))
+	for _, option := range answer {
+		id, ok := optionToID[option]
+		if !ok {
+			return nil, fmt.Errorf("select sections: unknown section option %q", option)
+		}
+		selected = append(selected, id)
+	}
+	return selected, nil
 }
 
 func (surveyInitPrompter) ConfirmApply(in io.Reader, out io.Writer, errOut io.Writer) (bool, error) {
@@ -157,4 +168,11 @@ func describeSection(section model.Section) string {
 		parts = append(parts, description)
 	}
 	return strings.Join(parts, " — ")
+}
+
+func sectionOptionLabel(section model.Section) string {
+	if label := strings.TrimSpace(section.Label); label != "" {
+		return label
+	}
+	return section.ID
 }

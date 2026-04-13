@@ -64,14 +64,14 @@ func TestEmbeddedRepository_Get(t *testing.T) {
 	}
 
 	mustContain := []string{
-		filepath.Clean("00_inbox"),
-		filepath.Clean("01_business/concept"),
-		filepath.Clean("02_product/vision"),
-		filepath.Clean("06_engineering/adrs"),
-		filepath.Clean("06_engineering/dev-plans"),
-		filepath.Clean("08_deploy/ci-cd"),
-		filepath.Clean("10_secrets/local-only"),
-		filepath.Clean("99_archive"),
+		filepath.Clean("inbox"),
+		filepath.Clean("business/concept"),
+		filepath.Clean("product/vision"),
+		filepath.Clean("engineering/adrs"),
+		filepath.Clean("engineering/dev-plans"),
+		filepath.Clean("deploy/ci-cd"),
+		filepath.Clean("secrets/local-only"),
+		filepath.Clean("archive"),
 	}
 	for _, path := range mustContain {
 		if _, ok := directories[path]; !ok {
@@ -80,12 +80,12 @@ func TestEmbeddedRepository_Get(t *testing.T) {
 	}
 
 	mustNotContain := []string{
-		filepath.Clean("01_business/vision"),
-		filepath.Clean("01_business/roadmap"),
-		filepath.Clean("06_engineering/adr"),
-		filepath.Clean("06_engineering/plans"),
-		filepath.Clean("07_repos/app"),
-		filepath.Clean("07_repos/infra"),
+		filepath.Clean("business/vision"),
+		filepath.Clean("business/roadmap"),
+		filepath.Clean("engineering/adr"),
+		filepath.Clean("engineering/plans"),
+		filepath.Clean("repos/app"),
+		filepath.Clean("repos/infra"),
 	}
 	for _, path := range mustNotContain {
 		if _, ok := directories[path]; ok {

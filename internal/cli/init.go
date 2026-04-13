@@ -49,7 +49,7 @@ func newInitCommandWithPrompter(prompter initPrompter) *cobra.Command {
 		Long:  "Analyze the current directory, build an execution plan from a preset, render a preview, and optionally apply the changes.",
 		Example: "  boottree init\n" +
 			"  boottree init --preset software-product --dry-run\n" +
-			"  boottree init --mode folders-only --include 01_business,06_engineering --yes\n" +
+			"  boottree init --mode folders-only --include business,engineering --yes\n" +
 			"  boottree init --force --yes",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -42,7 +42,7 @@ func TestReadInitFlags_NonInteractiveWhenAnyFlagChanged(t *testing.T) {
 	flags := &initCommandFlags{}
 	bindInitFlags(cmd, flags)
 
-	args := []string{"--preset=software-product", "--mode=folders-only", "--include=01_business,06_engineering", "--dry-run", "--yes", "--force"}
+	args := []string{"--preset=software-product", "--mode=folders-only", "--include=business,engineering", "--dry-run", "--yes", "--force"}
 	if err := cmd.ParseFlags(args); err != nil {
 		t.Fatalf("ParseFlags() error = %v", err)
 	}
@@ -51,7 +51,7 @@ func TestReadInitFlags_NonInteractiveWhenAnyFlagChanged(t *testing.T) {
 	if parsed.Interactive {
 		t.Fatal("expected non-interactive mode")
 	}
-	if !reflect.DeepEqual(parsed.Include, []string{"01_business", "06_engineering"}) {
+	if !reflect.DeepEqual(parsed.Include, []string{"business", "engineering"}) {
 		t.Fatalf("unexpected sections: %#v", parsed.Include)
 	}
 }
@@ -62,7 +62,7 @@ func TestCompleteInitOptions_InteractiveUsesPromptSelections(t *testing.T) {
 	prompter := stubInitPrompter{
 		preset:   "software-product",
 		mode:     model.InitModeFoldersOnly,
-		sections: []string{"00_inbox", "05_docs", "99_archive"},
+		sections: []string{"inbox", "docs", "archive"},
 	}
 
 	options, presetName, err := completeInitOptions(context.Background(), bootstrap.Presets, strings.NewReader(""), &out, &out, prompter, parsedInitArgs{Interactive: true})
@@ -76,15 +76,15 @@ func TestCompleteInitOptions_InteractiveUsesPromptSelections(t *testing.T) {
 	if options.Mode != model.InitModeFoldersOnly {
 		t.Fatalf("unexpected mode: %q", options.Mode)
 	}
-	wantSections := []string{"00_inbox", "05_docs", "99_archive"}
+	wantSections := []string{"inbox", "docs", "archive"}
 	if !reflect.DeepEqual(options.SelectedSections, wantSections) {
 		t.Fatalf("unexpected selected sections: %#v", options.SelectedSections)
 	}
 }
 
 func TestCompactStrings_DeduplicatesAndPreservesOrder(t *testing.T) {
-	got := compactStrings([]string{"03_marketing", "01_business", "03_marketing", "", " 02_product "})
-	want := []string{"03_marketing", "01_business", "02_product"}
+	got := compactStrings([]string{"marketing", "business", "marketing", "", " product "})
+	want := []string{"marketing", "business", "product"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("compactStrings() = %#v, want %#v", got, want)
 	}

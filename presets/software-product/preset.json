@@ -2,24 +2,24 @@
   "name": "software-product",
   "description": "Standard structure for product, operations and engineering workspaces.",
   "sections": [
-    {"id": "00_inbox", "label": "Inbox", "description": "Unsorted incoming materials and temporary captures."},
-    {"id": "01_business", "label": "Business", "description": "Business concept, planning, proposals, research and legal artifacts."},
-    {"id": "02_product", "label": "Product", "description": "Product vision, roadmap, requirements, pricing and analytics."},
-    {"id": "03_marketing", "label": "Marketing", "description": "Marketing strategy, content, creatives and presentations."},
-    {"id": "04_brand", "label": "Brand", "description": "Brand identity, logo assets, guidelines and source files."},
-    {"id": "05_docs", "label": "Docs", "description": "General, operational, onboarding and support documentation."},
-    {"id": "06_engineering", "label": "Engineering", "description": "Architecture, ADRs, dev plans, specifications, diagrams, API docs, runbooks and QA."},
-    {"id": "07_repos", "label": "Repos", "description": "Repository workspaces and linked codebases."},
-    {"id": "08_deploy", "label": "Deploy", "description": "Docker, CI/CD, environments and release artifacts."},
-    {"id": "09_assets", "label": "Assets", "description": "Shared non-code assets used across the project."},
-    {"id": "10_secrets", "label": "Secrets", "description": "Secret handling references, local-only storage and templates."},
-    {"id": "99_archive", "label": "Archive", "description": "Archived materials kept for reference."}
+    {"id": "inbox", "label": "Inbox", "description": "Unsorted incoming materials and temporary captures."},
+    {"id": "business", "label": "Business", "description": "Business concept, planning, proposals, research and legal artifacts."},
+    {"id": "product", "label": "Product", "description": "Product vision, roadmap, requirements, pricing and analytics."},
+    {"id": "marketing", "label": "Marketing", "description": "Marketing strategy, content, creatives and presentations."},
+    {"id": "brand", "label": "Brand", "description": "Brand identity, logo assets, guidelines and source files."},
+    {"id": "docs", "label": "Docs", "description": "General, operational, onboarding and support documentation."},
+    {"id": "engineering", "label": "Engineering", "description": "Architecture, ADRs, dev plans, specifications, diagrams, API docs, runbooks and QA."},
+    {"id": "repos", "label": "Repos", "description": "Repository workspaces and linked codebases."},
+    {"id": "deploy", "label": "Deploy", "description": "Docker, CI/CD, environments and release artifacts."},
+    {"id": "assets", "label": "Assets", "description": "Shared non-code assets used across the project."},
+    {"id": "secrets", "label": "Secrets", "description": "Secret handling references, local-only storage and templates."},
+    {"id": "archive", "label": "Archive", "description": "Archived materials kept for reference."}
   ],
   "directories": [
-    {"path": "00_inbox", "sections": ["00_inbox"]},
+    {"path": "inbox", "sections": ["inbox"]},
     {
-      "path": "01_business",
-      "sections": ["01_business"],
+      "path": "business",
+      "sections": ["business"],
       "children": [
         {"path": "concept"},
         {"path": "business-plan"},
@@ -29,8 +29,8 @@
       ]
     },
     {
-      "path": "02_product",
-      "sections": ["02_product"],
+      "path": "product",
+      "sections": ["product"],
       "children": [
         {"path": "vision"},
         {"path": "roadmap"},
@@ -40,8 +40,8 @@
       ]
     },
     {
-      "path": "03_marketing",
-      "sections": ["03_marketing"],
+      "path": "marketing",
+      "sections": ["marketing"],
       "children": [
         {"path": "strategy"},
         {"path": "content"},
@@ -50,8 +50,8 @@
       ]
     },
     {
-      "path": "04_brand",
-      "sections": ["04_brand"],
+      "path": "brand",
+      "sections": ["brand"],
       "children": [
         {"path": "logo"},
         {"path": "identity"},
@@ -60,8 +60,8 @@
       ]
     },
     {
-      "path": "05_docs",
-      "sections": ["05_docs"],
+      "path": "docs",
+      "sections": ["docs"],
       "children": [
         {"path": "general"},
         {"path": "operations"},
@@ -70,8 +70,8 @@
       ]
     },
     {
-      "path": "06_engineering",
-      "sections": ["06_engineering"],
+      "path": "engineering",
+      "sections": ["engineering"],
       "children": [
         {"path": "architecture"},
         {"path": "adrs"},
@@ -83,10 +83,10 @@
         {"path": "qa"}
       ]
     },
-    {"path": "07_repos", "sections": ["07_repos"]},
+    {"path": "repos", "sections": ["repos"]},
     {
-      "path": "08_deploy",
-      "sections": ["08_deploy"],
+      "path": "deploy",
+      "sections": ["deploy"],
       "children": [
         {"path": "docker"},
         {"path": "ci-cd"},
@@ -94,20 +94,20 @@
         {"path": "release"}
       ]
     },
-    {"path": "09_assets", "sections": ["09_assets"]},
+    {"path": "assets", "sections": ["assets"]},
     {
-      "path": "10_secrets",
-      "sections": ["10_secrets"],
+      "path": "secrets",
+      "sections": ["secrets"],
       "children": [
         {"path": "vault-reference"},
         {"path": "local-only"},
         {"path": "templates"}
       ]
     },
-    {"path": "99_archive", "sections": ["99_archive"]}
+    {"path": "archive", "sections": ["archive"]}
   ],
   "templates": [
     {"sourceTemplate": "software-product/docs/README.md.tmpl", "targetPath": "README.md"},
-    {"sourceTemplate": "software-product/engineering/architecture.md.tmpl", "targetPath": "06_engineering/architecture/00-architecture.md", "sections": ["06_engineering"]}
+    {"sourceTemplate": "software-product/engineering/architecture.md.tmpl", "targetPath": "engineering/architecture/architecture.md", "sections": ["engineering"]}
   ]
 }

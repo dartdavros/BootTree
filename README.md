@@ -223,3 +223,6 @@ go build -ldflags="-X boottree/internal/buildinfo.Version=1.0.0 -X boottree/inte
 ```
 
 ## Releases for maintainers
+
+
+The release manifest is generated from GoReleaser metadata in `dist/artifacts.json`, so only actual runtime release artifacts are published into the update manifest.

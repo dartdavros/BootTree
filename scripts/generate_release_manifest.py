@@ -5,12 +5,15 @@ import argparse
 import hashlib
 import json
 import pathlib
-import re
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Any
 
 PROJECT_NAME = "boottree"
+SUPPORTED_GOOS = {"linux", "darwin", "windows"}
+SUPPORTED_GOARCH = {"amd64", "arm64"}
+RUNTIME_ARTIFACT_TYPES = {"Archive", "Binary"}
 
 
 @dataclass(frozen=True)
@@ -24,7 +27,7 @@ class AssetEntry:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate BootTree release manifest from GoReleaser dist artifacts.")
+    parser = argparse.ArgumentParser(description="Generate BootTree release manifest from GoReleaser metadata.")
     parser.add_argument("--version", required=True, help="Release version, for example v0.4.0 or 0.4.0.")
     parser.add_argument("--dist-dir", required=True, help="Path to GoReleaser dist directory.")
     parser.add_argument("--base-url", required=True, help="Base URL where release assets are published.")
@@ -75,67 +78,125 @@ def load_checksums(dist_dir: pathlib.Path, version: str) -> dict[str, str]:
     return mapping
 
 
-def detect_archive(filename: str) -> str:
-    lower = filename.lower()
-    if lower.endswith(".tar.gz"):
-        return "tar.gz"
-    if lower.endswith(".zip"):
-        return "zip"
-    if lower.endswith(".exe"):
+def load_artifacts_metadata(dist_dir: pathlib.Path) -> list[dict[str, Any]]:
+    metadata_path = dist_dir / "artifacts.json"
+    if not metadata_path.exists():
+        raise FileNotFoundError(f"artifacts metadata file not found: {metadata_path}")
+
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise ValueError("artifacts metadata must be a JSON array")
+    return payload
+
+
+def normalize_relative_artifact_path(raw: str) -> pathlib.Path:
+    value = raw.strip()
+    if not value:
+        raise ValueError("artifact path is required")
+
+    normalized = pathlib.PurePosixPath(value)
+    parts = list(normalized.parts)
+    if parts and parts[0] == "dist":
+        parts = parts[1:]
+    if not parts:
+        raise ValueError(f"invalid artifact path: {raw}")
+    return pathlib.Path(*parts)
+
+
+def detect_archive(filename: str, artifact_type: str, extra: dict[str, Any]) -> str:
+    fmt = str(extra.get("Format", "")).strip().lower()
+    if artifact_type == "Archive":
+        if fmt in {"tar.gz", "zip"}:
+            return fmt
+        raise ValueError(f"unsupported archive format for {filename}: {fmt or '<empty>'}")
+    if artifact_type == "Binary":
         return "binary"
-    raise ValueError(f"unsupported artifact format: {filename}")
+    raise ValueError(f"unsupported artifact type for runtime manifest: {artifact_type}")
 
 
-def detect_binary(goos: str) -> str:
+def detect_binary(goos: str, extra: dict[str, Any]) -> str:
+    binary_name = str(extra.get("Binary", "")).strip()
+    if binary_name:
+        return binary_name
     return "boottree.exe" if goos == "windows" else "boottree"
 
 
-def parse_asset_filename(filename: str, version: str) -> tuple[str, str]:
-    escaped_version = re.escape(version)
-    match = re.fullmatch(rf"{PROJECT_NAME}_{escaped_version}_(linux|darwin|windows)_(amd64|arm64)(?:\.tar\.gz|\.zip|\.exe)", filename)
-    if not match:
-        raise ValueError(f"artifact does not match expected naming convention: {filename}")
-    return match.group(1), match.group(2)
+def resolve_sha256(filename: str, extra: dict[str, Any], checksums: dict[str, str], file_path: pathlib.Path) -> str:
+    raw_checksum = str(extra.get("Checksum", "")).strip()
+    if raw_checksum:
+        if ":" not in raw_checksum:
+            raise ValueError(f"invalid checksum format for {filename}: {raw_checksum}")
+        algorithm, digest = raw_checksum.split(":", 1)
+        if algorithm.lower() != "sha256":
+            raise ValueError(f"unsupported checksum algorithm for {filename}: {algorithm}")
+        digest = digest.strip().lower()
+        if not digest:
+            raise ValueError(f"empty checksum digest for {filename}")
+        return digest
+
+    sha256_value = checksums.get(filename)
+    if sha256_value:
+        return sha256_value
+    return hashlib.sha256(file_path.read_bytes()).hexdigest()
 
 
 def discover_assets(dist_dir: pathlib.Path, version: str, checksums: dict[str, str]) -> list[AssetEntry]:
+    metadata_entries = load_artifacts_metadata(dist_dir)
     assets: list[AssetEntry] = []
     seen_targets: set[tuple[str, str]] = set()
 
-    for path in sorted(dist_dir.iterdir()):
-        if not path.is_file():
+    for entry in metadata_entries:
+        if not isinstance(entry, dict):
             continue
-        if path.name.endswith("_checksums.txt"):
+
+        artifact_type = str(entry.get("type", "")).strip()
+        if artifact_type not in RUNTIME_ARTIFACT_TYPES:
             continue
-        if path.name.startswith("README"):
+
+        goos = str(entry.get("goos", "")).strip()
+        goarch = str(entry.get("goarch", "")).strip()
+        if goos not in SUPPORTED_GOOS or goarch not in SUPPORTED_GOARCH:
             continue
-        goos, goarch = parse_asset_filename(path.name, version)
+
+        name = str(entry.get("name", "")).strip()
+        raw_path = str(entry.get("path", "")).strip()
+        if not name:
+            raise ValueError("artifact entry is missing name")
+        if not raw_path:
+            raise ValueError(f"artifact entry is missing path for {name}")
+
+        extra = entry.get("extra")
+        if extra is None:
+            extra = {}
+        if not isinstance(extra, dict):
+            raise ValueError(f"artifact extra metadata must be an object for {name}")
+
         target = (goos, goarch)
         if target in seen_targets:
-            raise ValueError(f"duplicate asset for {goos}/{goarch}: {path.name}")
+            raise ValueError(f"duplicate runtime artifact for {goos}/{goarch}: {name}")
         seen_targets.add(target)
 
-        sha256_value = checksums.get(path.name)
-        if not sha256_value:
-            sha256_value = hashlib.sha256(path.read_bytes()).hexdigest()
+        artifact_path = dist_dir / normalize_relative_artifact_path(raw_path)
+        if not artifact_path.exists():
+            raise FileNotFoundError(f"artifact file not found: {artifact_path}")
 
         assets.append(
             AssetEntry(
                 os=goos,
                 arch=goarch,
-                archive=detect_archive(path.name),
-                binary=detect_binary(goos),
-                filename=path.name,
-                sha256=sha256_value,
+                archive=detect_archive(name, artifact_type, extra),
+                binary=detect_binary(goos, extra),
+                filename=name,
+                sha256=resolve_sha256(name, extra, checksums, artifact_path),
             )
         )
 
     if not assets:
-        raise ValueError(f"no release artifacts found in {dist_dir}")
-    return assets
+        raise ValueError(f"no runtime release artifacts found in {dist_dir}/artifacts.json")
+    return sorted(assets, key=lambda item: (item.os, item.arch))
 
 
-def build_manifest(version: str, channel: str, published_at: str, base_url: str, assets: list[AssetEntry]) -> dict:
+def build_manifest(version: str, channel: str, published_at: str, base_url: str, assets: list[AssetEntry]) -> dict[str, Any]:
     return {
         "channel": channel,
         "latest": version,

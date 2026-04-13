@@ -109,3 +109,8 @@ With GitHub Pages selected, the remaining operational requirement is simply that
 - The stable manifest always tracks the latest tagged release published by the workflow.
 - Asset URLs inside the manifest remain version-specific GitHub Release download URLs.
 - The stable Pages manifest is intentionally channel-scoped at `/updates/stable/manifest.json` so later channels such as `/updates/beta/manifest.json` can be added without changing the runtime URL model.
+
+
+## Manifest generation source of truth
+
+`manifest.json` is generated from GoReleaser metadata in `dist/artifacts.json`, not by scanning every file in `dist`. This keeps the update manifest aligned with actual release artifacts and avoids coupling to incidental files like changelogs or future metadata files.

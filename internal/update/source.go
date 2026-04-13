@@ -7,8 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -88,17 +86,20 @@ func readSource(ctx context.Context, raw string, client *http.Client) ([]byte, e
 	}
 
 	parsed, err := url.Parse(raw)
-	if err == nil && parsed.Scheme != "" {
-		switch parsed.Scheme {
-		case "https":
-			return readHTTPS(ctx, raw, client)
-		case "file":
-			return os.ReadFile(filepath.Clean(parsed.Path))
-		default:
-			return nil, fmt.Errorf("unsupported manifest scheme %q", parsed.Scheme)
-		}
+	if err != nil {
+		return nil, fmt.Errorf("parse manifest URL %q: %w", raw, err)
 	}
-	return os.ReadFile(filepath.Clean(raw))
+	if parsed.Scheme == "" {
+		return nil, fmt.Errorf("manifest URL %q must use https", raw)
+	}
+	if parsed.Scheme != "https" {
+		return nil, fmt.Errorf("manifest URL %q must use https", raw)
+	}
+	if parsed.Host == "" {
+		return nil, fmt.Errorf("manifest URL %q must include a host", raw)
+	}
+
+	return readHTTPS(ctx, parsed.String(), client)
 }
 
 func readHTTPS(ctx context.Context, raw string, client *http.Client) ([]byte, error) {

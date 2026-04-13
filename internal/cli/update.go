@@ -35,8 +35,7 @@ func newUpdateCommandWithDependencies(service update.Service, prompter updatePro
 		Long:  "Resolve an update plan from a release manifest, then optionally download, verify, and install the matching BootTree binary for the current platform.",
 		Example: "  boottree update --check\n" +
 			"  boottree update --yes\n" +
-			"  boottree update --version 0.2.0 --manifest-url https://example.com/boottree/manifest.json\n" +
-			"  boottree update --manifest-url .\\dist\\manifest.json",
+			"  boottree update --version 0.2.0 --manifest-url https://example.com/boottree/manifest.json",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUpdate(cmd, service, prompter, flags)
@@ -47,7 +46,7 @@ func newUpdateCommandWithDependencies(service update.Service, prompter updatePro
 	cmd.Flags().BoolVar(&flags.Yes, "yes", false, "Apply the update without confirmation")
 	cmd.Flags().StringVar(&flags.Version, "version", "", "Install a specific version from the manifest instead of the latest")
 	cmd.Flags().StringVar(&flags.Channel, "channel", "stable", "Release channel to resolve from the manifest")
-	cmd.Flags().StringVar(&flags.ManifestURL, "manifest-url", "", "Manifest URL or local path that describes available releases")
+	cmd.Flags().StringVar(&flags.ManifestURL, "manifest-url", "", "HTTPS manifest URL that describes available releases")
 	cmd.Flags().StringVar(&flags.InstallPath, "install-path", "", "Override the target install path for the updated binary")
 	return cmd
 }

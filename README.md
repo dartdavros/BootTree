@@ -98,8 +98,8 @@ boottree init --include business,engineering --yes
 boottree tree --depth 2
 boottree stats
 boottree install
-boottree update --check --manifest-url <manifest-url>
-boottree update --yes --manifest-url <manifest-url>
+boottree update --check --manifest-url <https-manifest-url>
+boottree update --yes --manifest-url <https-manifest-url>
 boottree completion powershell
 ```
 
@@ -130,10 +130,13 @@ Notes:
 
 - `--check` builds and prints the update plan without changing the installed binary.
 - `--yes` applies the update without interactive confirmation.
+- `--manifest-url` accepts only HTTPS URLs.
 - `--manifest-url` is required unless the binary was built with `boottree/internal/buildinfo.UpdateManifestURL` injected at release time.
 - `--install-path` can target a custom binary location when you do not want to replace the currently running executable.
 
 For release maintainers, a manifest can be generated from the GoReleaser `dist/` output with `scripts/generate_release_manifest.py`.
+
+The tag-based GitHub release workflow now generates `manifest.json` automatically and uploads it as a release asset. A stable production manifest URL is still a separate hosting decision.
 
 ## Repository layout
 

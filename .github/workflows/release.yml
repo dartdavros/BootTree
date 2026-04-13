@@ -24,6 +24,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
         with:
@@ -32,3 +37,16 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BOOTTREE_UPDATE_MANIFEST_URL: ${{ vars.BOOTTREE_UPDATE_MANIFEST_URL }}
+
+      - name: Generate release manifest
+        env:
+          BOOTTREE_RELEASE_VERSION: ${{ github.ref_name }}
+          BOOTTREE_RELEASE_BASE_URL: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}
+        run: |
+          python3 scripts/generate_release_manifest.py             --version "$BOOTTREE_RELEASE_VERSION"             --dist-dir dist             --base-url "$BOOTTREE_RELEASE_BASE_URL"             --output dist/manifest.json
+
+      - name: Upload release manifest asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/manifest.json

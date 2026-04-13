@@ -98,8 +98,9 @@ boottree init --include business,engineering --yes
 boottree tree --depth 2
 boottree stats
 boottree install
+boottree update --check
 boottree update --check --manifest-url <https-manifest-url>
-boottree update --yes --manifest-url <https-manifest-url>
+boottree update --yes
 boottree completion powershell
 ```
 
@@ -116,14 +117,20 @@ boottree completion powershell
 
 ## Self-update
 
-BootTree supports self-update through a release manifest JSON.
+BootTree supports self-update through a release manifest JSON served over HTTPS.
+
+GitHub Pages layout selected for the stable channel:
+
+```text
+https://<owner>.github.io/BootTree/updates/stable/manifest.json
+```
 
 Examples:
 
 ```powershell
-boottree update --check --manifest-url https://example.test/boottree/stable/manifest.json
-boottree update --yes --manifest-url https://example.test/boottree/stable/manifest.json
-boottree update --version 0.4.0 --manifest-url https://example.test/boottree/stable/manifest.json
+boottree update --check
+boottree update --yes
+boottree update --version 0.4.0 --manifest-url https://<owner>.github.io/BootTree/updates/stable/manifest.json
 ```
 
 Notes:
@@ -131,12 +138,10 @@ Notes:
 - `--check` builds and prints the update plan without changing the installed binary.
 - `--yes` applies the update without interactive confirmation.
 - `--manifest-url` accepts only HTTPS URLs.
-- `--manifest-url` is required unless the binary was built with `boottree/internal/buildinfo.UpdateManifestURL` injected at release time.
+- `--manifest-url` is optional for release builds because tagged releases now inject the GitHub Pages manifest URL into `boottree/internal/buildinfo.UpdateManifestURL`.
 - `--install-path` can target a custom binary location when you do not want to replace the currently running executable.
 
-For release maintainers, a manifest can be generated from the GoReleaser `dist/` output with `scripts/generate_release_manifest.py`.
-
-The tag-based GitHub release workflow now generates `manifest.json` automatically and uploads it as a release asset. A stable production manifest URL is still a separate hosting decision.
+For release maintainers, a manifest can be generated from the GoReleaser `dist/` output with `scripts/generate_release_manifest.py`. Tagged GitHub releases now both attach `manifest.json` to the GitHub Release and publish the stable manifest to GitHub Pages.
 
 ## Repository layout
 
@@ -211,18 +216,10 @@ BootTree never reads or prints the contents of secret-like files.
 
 ## Version metadata
 
-Default local builds print `dev` metadata. Release builds inject version information from the Git tag, commit, and build date.
+Default local builds print `dev` metadata. Release builds inject version information from the Git tag, commit, build date, and stable GitHub Pages manifest URL.
 
 ```powershell
-go build -ldflags="-X boottree/internal/buildinfo.Version=1.0.0 -X boottree/internal/buildinfo.Commit=abc1234 -X boottree/internal/buildinfo.BuildDate=2026-04-10T12:00:00Z" -o .\dist\boottree.exe .\cmd\boottree
+go build -ldflags="-X boottree/internal/buildinfo.Version=1.0.0 -X boottree/internal/buildinfo.Commit=abc1234 -X boottree/internal/buildinfo.BuildDate=2026-04-10T12:00:00Z -X boottree/internal/buildinfo.UpdateManifestURL=https://<owner>.github.io/BootTree/updates/stable/manifest.json" -o .\dist\boottree.exe .\cmd\boottree
 ```
 
 ## Releases for maintainers
-
-- every push and pull request runs CI on Windows, Linux, and macOS
-- pushing a tag like `v0.1.0` creates a GitHub Release through GoReleaser
-- release artifacts include Windows binaries, Linux/macOS archives, and a checksum file
-
-## License
-
-BootTree is licensed under the MIT License. See `LICENSE`.

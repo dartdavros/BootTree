@@ -7,10 +7,17 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      BOOTTREE_PAGES_MANIFEST_URL: ${{ vars.BOOTTREE_UPDATE_MANIFEST_URL || format('https://{0}.github.io/{1}/updates/stable/manifest.json', github.repository_owner, github.event.repository.name) }}
+
+    outputs:
+      manifest-url: ${{ steps.manifest_url.outputs.value }}
 
     steps:
       - name: Checkout repository
@@ -29,6 +36,14 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Expose manifest URL
+        id: manifest_url
+        run: |
+          echo "value=${BOOTTREE_PAGES_MANIFEST_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Pages
+        uses: actions/configure-pages@v5
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
         with:
@@ -37,16 +52,58 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BOOTTREE_UPDATE_MANIFEST_URL: ${{ vars.BOOTTREE_UPDATE_MANIFEST_URL }}
+          BOOTTREE_UPDATE_MANIFEST_URL: ${{ env.BOOTTREE_PAGES_MANIFEST_URL }}
 
       - name: Generate release manifest
         env:
           BOOTTREE_RELEASE_VERSION: ${{ github.ref_name }}
           BOOTTREE_RELEASE_BASE_URL: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}
         run: |
-          python3 scripts/generate_release_manifest.py             --version "$BOOTTREE_RELEASE_VERSION"             --dist-dir dist             --base-url "$BOOTTREE_RELEASE_BASE_URL"             --output dist/manifest.json
+          python3 scripts/generate_release_manifest.py \
+            --version "$BOOTTREE_RELEASE_VERSION" \
+            --dist-dir dist \
+            --base-url "$BOOTTREE_RELEASE_BASE_URL" \
+            --output dist/manifest.json
+
+      - name: Prepare GitHub Pages artifact
+        run: |
+          mkdir -p pages/updates/stable
+          cp dist/manifest.json pages/updates/stable/manifest.json
+          cat > pages/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>BootTree updates</title>
+            </head>
+            <body>
+              <main>
+                <h1>BootTree updates</h1>
+                <p>Stable manifest: <a href="./updates/stable/manifest.json">./updates/stable/manifest.json</a></p>
+              </main>
+            </body>
+          </html>
+          EOF
+          touch pages/.nojekyll
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: pages
 
       - name: Upload release manifest asset
         uses: softprops/action-gh-release@v2
         with:
           files: dist/manifest.json
+
+  deploy-pages:
+    runs-on: ubuntu-latest
+    needs: release
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

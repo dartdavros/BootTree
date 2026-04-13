@@ -14,6 +14,7 @@ PROJECT_NAME = "boottree"
 SUPPORTED_GOOS = {"linux", "darwin", "windows"}
 SUPPORTED_GOARCH = {"amd64", "arm64"}
 RUNTIME_ARTIFACT_TYPES = {"Archive", "Binary"}
+RELEASE_ARTIFACT_ID = "releases"
 
 
 @dataclass(frozen=True)
@@ -153,6 +154,16 @@ def discover_assets(dist_dir: pathlib.Path, version: str, checksums: dict[str, s
         if artifact_type not in RUNTIME_ARTIFACT_TYPES:
             continue
 
+        extra = entry.get("extra")
+        if extra is None:
+            extra = {}
+        if not isinstance(extra, dict):
+            raise ValueError(f"artifact extra metadata must be an object for {entry.get('name', '<unknown>')}")
+
+        artifact_id = str(extra.get("ID", "")).strip()
+        if artifact_id != RELEASE_ARTIFACT_ID:
+            continue
+
         goos = str(entry.get("goos", "")).strip()
         goarch = str(entry.get("goarch", "")).strip()
         if goos not in SUPPORTED_GOOS or goarch not in SUPPORTED_GOARCH:
@@ -164,12 +175,6 @@ def discover_assets(dist_dir: pathlib.Path, version: str, checksums: dict[str, s
             raise ValueError("artifact entry is missing name")
         if not raw_path:
             raise ValueError(f"artifact entry is missing path for {name}")
-
-        extra = entry.get("extra")
-        if extra is None:
-            extra = {}
-        if not isinstance(extra, dict):
-            raise ValueError(f"artifact extra metadata must be an object for {name}")
 
         target = (goos, goarch)
         if target in seen_targets:
@@ -192,7 +197,7 @@ def discover_assets(dist_dir: pathlib.Path, version: str, checksums: dict[str, s
         )
 
     if not assets:
-        raise ValueError(f"no runtime release artifacts found in {dist_dir}/artifacts.json")
+        raise ValueError(f"no packaged release artifacts with extra.ID={RELEASE_ARTIFACT_ID!r} found in {dist_dir}/artifacts.json")
     return sorted(assets, key=lambda item: (item.os, item.arch))
 
 

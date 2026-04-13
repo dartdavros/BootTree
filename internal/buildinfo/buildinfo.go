@@ -3,9 +3,10 @@ package buildinfo
 import "fmt"
 
 var (
-	Version   = "dev"
-	Commit    = "none"
-	BuildDate = "unknown"
+	Version           = "dev"
+	Commit            = "none"
+	BuildDate         = "unknown"
+	UpdateManifestURL = ""
 )
 
 func Short() string {

@@ -68,6 +68,7 @@ func TestShouldOfferInstall(t *testing.T) {
 		{name: "windows init tty", commandPath: "boottree init", goos: "windows", interactive: true, want: true},
 		{name: "windows install command", commandPath: "boottree install", goos: "windows", interactive: true, want: false},
 		{name: "windows version command", commandPath: "boottree version", goos: "windows", interactive: true, want: false},
+		{name: "windows update command", commandPath: "boottree update", goos: "windows", interactive: true, want: false},
 		{name: "non interactive", commandPath: "boottree init", goos: "windows", interactive: false, want: false},
 		{name: "linux", commandPath: "boottree init", goos: "linux", interactive: true, want: false},
 	}

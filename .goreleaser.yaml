@@ -28,6 +28,7 @@ builds:
         -X boottree/internal/buildinfo.Version={{ .Version }}
         -X boottree/internal/buildinfo.Commit={{ .Commit }}
         -X boottree/internal/buildinfo.BuildDate={{ .Date }}
+        -X boottree/internal/buildinfo.UpdateManifestURL={{ .Env.BOOTTREE_UPDATE_MANIFEST_URL }}
 
 archives:
   - id: releases

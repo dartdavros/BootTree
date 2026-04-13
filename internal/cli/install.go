@@ -81,6 +81,7 @@ func shouldOfferInstall(commandPath string, goos string, interactive bool) bool 
 	forbidden := map[string]struct{}{
 		"boottree completion": {},
 		"boottree install":    {},
+		"boottree update":     {},
 		"boottree version":    {},
 	}
 	_, blocked := forbidden[commandPath]

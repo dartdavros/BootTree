@@ -30,6 +30,9 @@ func TestNewRootCommand_HelpFlag(t *testing.T) {
 	if !strings.Contains(text, "install") {
 		t.Fatalf("expected help to include install command, got %q", text)
 	}
+	if !strings.Contains(text, "update") {
+		t.Fatalf("expected help to include update command, got %q", text)
+	}
 }
 
 func TestNewRootCommand_VersionFlag(t *testing.T) {

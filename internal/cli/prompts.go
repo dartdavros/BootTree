@@ -8,6 +8,7 @@ import (
 
 	"boottree/internal/core/model"
 	"boottree/internal/platform"
+	"boottree/internal/update"
 
 	survey "github.com/AlecAivazis/survey/v2"
 	surveyterminal "github.com/AlecAivazis/survey/v2/terminal"
@@ -111,48 +112,42 @@ func (surveyInitPrompter) SelectSections(in io.Reader, out io.Writer, errOut io.
 	return selected, nil
 }
 
-func (surveyInitPrompter) ConfirmApply(in io.Reader, out io.Writer, errOut io.Writer) (bool, error) {
-	prompt := &survey.Confirm{
-		Message: "Apply changes?",
-		Default: false,
-	}
-
-	var confirmed bool
-	if err := survey.AskOne(prompt, &confirmed, askOpts(in, out, errOut)...); err != nil {
-		return false, wrapPromptError("confirm apply", err)
-	}
-	return confirmed, nil
+func (p surveyInitPrompter) ConfirmApply(in io.Reader, out io.Writer, errOut io.Writer) (bool, error) {
+	return p.confirmBoolean(in, out, errOut, "Apply changes?", false, "confirm apply")
 }
 
-func (surveyInitPrompter) ConfirmInstall(in io.Reader, out io.Writer, errOut io.Writer, state platform.InstallState) (bool, error) {
-	prompt := &survey.Confirm{
-		Message: fmt.Sprintf("Install %s into %s and add it to PATH for the current user?", state.CommandName, state.SuggestedInstallDir),
-		Default: true,
-	}
+func (p surveyInitPrompter) ConfirmInstall(in io.Reader, out io.Writer, errOut io.Writer, state platform.InstallState) (bool, error) {
+	message := fmt.Sprintf("Install %s into %s and add it to PATH for the current user?", state.CommandName, state.SuggestedInstallDir)
+	return p.confirmBoolean(in, out, errOut, message, true, "confirm install")
+}
 
+func (p surveyInitPrompter) ConfirmUpdate(in io.Reader, out io.Writer, errOut io.Writer, plan update.Plan) (bool, error) {
+	message := fmt.Sprintf("Install BootTree %s over %s?", plan.TargetVersion, plan.CurrentVersion)
+	if plan.RequiresDeferredSwap {
+		message += " The current Windows executable will be replaced after this process exits."
+	}
+	return p.confirmBoolean(in, out, errOut, message, true, "confirm update")
+}
+
+func (surveyInitPrompter) confirmBoolean(in io.Reader, out io.Writer, errOut io.Writer, message string, defaultValue bool, action string) (bool, error) {
+	prompt := &survey.Confirm{Message: message, Default: defaultValue}
 	var confirmed bool
 	if err := survey.AskOne(prompt, &confirmed, askOpts(in, out, errOut)...); err != nil {
-		return false, wrapPromptError("confirm install", err)
+		return false, wrapPromptError(action, err)
 	}
 	return confirmed, nil
 }
 
 func askOpts(in io.Reader, out io.Writer, errOut io.Writer) []survey.AskOpt {
 	inFile, ok := in.(surveyterminal.FileReader)
-	if !ok {
-		return nil
-	}
+	if !ok { return nil }
 	outFile, ok := out.(surveyterminal.FileWriter)
-	if !ok {
-		return nil
-	}
+	if !ok { return nil }
 	return []survey.AskOpt{survey.WithStdio(inFile, outFile, errOut)}
 }
 
 func wrapPromptError(action string, err error) error {
-	if err == nil {
-		return nil
-	}
+	if err == nil { return nil }
 	if errors.Is(err, surveyterminal.InterruptErr) {
 		return fmt.Errorf("%s: interrupted", action)
 	}
@@ -161,18 +156,12 @@ func wrapPromptError(action string, err error) error {
 
 func describeSection(section model.Section) string {
 	parts := make([]string, 0, 2)
-	if label := strings.TrimSpace(section.Label); label != "" {
-		parts = append(parts, label)
-	}
-	if description := strings.TrimSpace(section.Description); description != "" {
-		parts = append(parts, description)
-	}
+	if label := strings.TrimSpace(section.Label); label != "" { parts = append(parts, label) }
+	if description := strings.TrimSpace(section.Description); description != "" { parts = append(parts, description) }
 	return strings.Join(parts, " — ")
 }
 
 func sectionOptionLabel(section model.Section) string {
-	if label := strings.TrimSpace(section.Label); label != "" {
-		return label
-	}
+	if label := strings.TrimSpace(section.Label); label != "" { return label }
 	return section.ID
 }

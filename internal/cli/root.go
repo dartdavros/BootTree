@@ -29,6 +29,7 @@ func newRootCommandWithDependencies(installer selfInstaller, prompter installPro
 			"  boottree tree --depth 2\n" +
 			"  boottree stats\n" +
 			"  boottree install\n" +
+			"  boottree update --check\n" +
 			"  boottree version",
 	}
 	cmd.SetVersionTemplate("boottree {{.Version}}\n")
@@ -40,6 +41,7 @@ func newRootCommandWithDependencies(installer selfInstaller, prompter installPro
 	cmd.AddCommand(newTreeCommand())
 	cmd.AddCommand(newStatsCommand())
 	cmd.AddCommand(newInstallCommandWithDependencies(installer, prompter))
+	cmd.AddCommand(newUpdateCommand())
 	return cmd
 }
 

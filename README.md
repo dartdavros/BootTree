@@ -98,6 +98,8 @@ boottree init --include business,engineering --yes
 boottree tree --depth 2
 boottree stats
 boottree install
+boottree update --check --manifest-url <manifest-url>
+boottree update --yes --manifest-url <manifest-url>
 boottree completion powershell
 ```
 
@@ -108,7 +110,30 @@ boottree completion powershell
 - `boottree stats` — print structure statistics, empty directories, and secret-like filenames
 - `boottree install` — install the current executable for the current user and update `PATH` where supported
 - `boottree version` — print build information
+- `boottree update` — check or apply a self-update from a release manifest
 - `boottree completion <shell>` — generate shell completion scripts via Cobra
+
+
+## Self-update
+
+BootTree supports self-update through a release manifest JSON.
+
+Examples:
+
+```powershell
+boottree update --check --manifest-url https://example.test/boottree/stable/manifest.json
+boottree update --yes --manifest-url https://example.test/boottree/stable/manifest.json
+boottree update --version 0.4.0 --manifest-url https://example.test/boottree/stable/manifest.json
+```
+
+Notes:
+
+- `--check` builds and prints the update plan without changing the installed binary.
+- `--yes` applies the update without interactive confirmation.
+- `--manifest-url` is required unless the binary was built with `boottree/internal/buildinfo.UpdateManifestURL` injected at release time.
+- `--install-path` can target a custom binary location when you do not want to replace the currently running executable.
+
+For release maintainers, a manifest can be generated from the GoReleaser `dist/` output with `scripts/generate_release_manifest.py`.
 
 ## Repository layout
 

@@ -99,7 +99,12 @@ func (s Service) Apply(ctx context.Context, plan Plan) (Result, error) {
 	if err := os.MkdirAll(plan.TempDir, 0o755); err != nil {
 		return Result{}, fmt.Errorf("create temp directory %q: %w", plan.TempDir, err)
 	}
-	defer func() { _ = os.RemoveAll(plan.TempDir) }()
+	cleanupTempDir := true
+	defer func() {
+		if cleanupTempDir {
+			_ = os.RemoveAll(plan.TempDir)
+		}
+	}()
 
 	archivePath := filepath.Join(plan.TempDir, filepath.Base(plan.TempArchivePath))
 	if err := s.Downloader.Download(ctx, plan.Asset.URL, archivePath); err != nil {
@@ -112,7 +117,17 @@ func (s Service) Apply(ctx context.Context, plan Plan) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	return installBinary(ctx, plan, extractedPath)
+
+	result, err := installBinary(ctx, plan, extractedPath)
+	if err != nil {
+		return Result{}, err
+	}
+	cleanupTempDir = shouldCleanupTempDir(result)
+	return result, nil
+}
+
+func shouldCleanupTempDir(result Result) bool {
+	return !result.Deferred
 }
 
 func resolveInstallPath(override string) (string, string, error) {

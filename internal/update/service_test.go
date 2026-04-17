@@ -107,3 +107,17 @@ func TestCompareCurrentToTarget(t *testing.T) {
 		t.Fatal("expected exact version comparison to differ")
 	}
 }
+
+func TestShouldCleanupTempDir(t *testing.T) {
+	t.Run("cleanup non deferred update temp dir", func(t *testing.T) {
+		if !shouldCleanupTempDir(Result{Deferred: false}) {
+			t.Fatal("expected non-deferred update to clean temp dir")
+		}
+	})
+
+	t.Run("retain deferred update temp dir", func(t *testing.T) {
+		if shouldCleanupTempDir(Result{Deferred: true}) {
+			t.Fatal("expected deferred update to retain temp dir for helper swap")
+		}
+	})
+}

@@ -54,6 +54,8 @@ func buildPowerShellSwapScript(pid int64, source string, target string, backup s
 		"$source = " + quotePowerShell(source),
 		"$target = " + quotePowerShell(target),
 		"$backup = " + quotePowerShell(backup),
+		"$scriptPath = $MyInvocation.MyCommand.Path",
+		"$tempDir = Split-Path -Parent $source",
 		"for ($i = 0; $i -lt 300; $i++) {",
 		"  if (-not (Get-Process -Id $parentPid -ErrorAction SilentlyContinue)) { break }",
 		"  Start-Sleep -Milliseconds 200",
@@ -63,7 +65,8 @@ func buildPowerShellSwapScript(pid int64, source string, target string, backup s
 		"if (Test-Path $backup) { Remove-Item -Force $backup }",
 		"if (Test-Path $target) { Move-Item -Force $target $backup }",
 		"Move-Item -Force $source $target",
-		"Remove-Item -Force $MyInvocation.MyCommand.Path",
+		"if (Test-Path $scriptPath) { Remove-Item -Force $scriptPath -ErrorAction SilentlyContinue }",
+		"if (Test-Path $tempDir) { Remove-Item -Force -Recurse $tempDir -ErrorAction SilentlyContinue }",
 	}, "\n")
 }
 

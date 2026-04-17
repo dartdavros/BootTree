@@ -51,27 +51,28 @@ func TestEmbeddedRepository_Get(t *testing.T) {
 	if preset.Name != "software-product" {
 		t.Fatalf("unexpected preset name: %s", preset.Name)
 	}
-	if len(preset.Sections) != 12 {
+	if len(preset.Sections) != 9 {
 		t.Fatalf("unexpected sections count: %d", len(preset.Sections))
 	}
-	if len(preset.Templates) != 2 {
+	if len(preset.Templates) != 0 {
 		t.Fatalf("unexpected templates count: %d", len(preset.Templates))
 	}
 
 	directories := flattenPaths(preset.Directories)
-	if len(directories) != 49 {
+	if len(directories) != 9 {
 		t.Fatalf("unexpected directories count: %d", len(directories))
 	}
 
 	mustContain := []string{
+		filepath.Clean("artefacts"),
+		filepath.Clean("code"),
 		filepath.Clean("inbox"),
-		filepath.Clean("business/concept"),
-		filepath.Clean("product/vision"),
-		filepath.Clean("engineering/adrs"),
-		filepath.Clean("engineering/dev-plans"),
-		filepath.Clean("deploy/ci-cd"),
-		filepath.Clean("secrets/local-only"),
+		filepath.Clean("design"),
 		filepath.Clean("archive"),
+		filepath.Clean("secrets"),
+		filepath.Clean("docs"),
+		filepath.Clean("marketing"),
+		filepath.Clean("business"),
 	}
 	for _, path := range mustContain {
 		if _, ok := directories[path]; !ok {
@@ -80,12 +81,12 @@ func TestEmbeddedRepository_Get(t *testing.T) {
 	}
 
 	mustNotContain := []string{
-		filepath.Clean("business/vision"),
-		filepath.Clean("business/roadmap"),
-		filepath.Clean("engineering/adr"),
-		filepath.Clean("engineering/plans"),
-		filepath.Clean("repos/app"),
-		filepath.Clean("repos/infra"),
+		filepath.Clean("business/concept"),
+		filepath.Clean("docs/general"),
+		filepath.Clean("marketing/content"),
+		filepath.Clean("secrets/local-only"),
+		filepath.Clean("code/app"),
+		filepath.Clean("artefacts/release"),
 	}
 	for _, path := range mustNotContain {
 		if _, ok := directories[path]; ok {
